@@ -65,7 +65,7 @@ async function subscribeToPushNotifications(registro, user) {
     console.log('📤 Enviando al backend:', payload);
 
     // Enviar la suscripción al backend
-    const response = await fetch('http://localhost:5000/auth/subscribe', {
+    const response = await fetch('https://backend-be7l.onrender.com/auth/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
