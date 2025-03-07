@@ -19,7 +19,7 @@ const Register = () => {
 
     try {
       // Intentamos enviar los datos al backend
-      await axios.post('${API_URL}/auth/login/register', { username, password })
+      await axios.post(`${API_URL}/auth/register`, { username, password })
 
 
       alert('Usuario registrado exitosamente');
@@ -32,7 +32,7 @@ const Register = () => {
       // { data: { url: <endpoint>, data: { ...payload } } }
       saveToIndexedDB({
         data: {
-          url: '${API_URL}/register',
+          url: `${API_URL}/register`,
           data: { username, password },
         },
       });
