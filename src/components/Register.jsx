@@ -20,7 +20,7 @@ const Register = () => {
 
     try {
       // Intentamos enviar los datos al backend
-      await axios.post(`${API_URL}/auth/register`, { username, password })
+      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password })
 
 
       alert('Usuario registrado exitosamente');
