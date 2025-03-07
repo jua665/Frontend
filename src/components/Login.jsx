@@ -21,7 +21,7 @@ const Login = () => {
     }
   
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
+      const response = await axios.post('https://backend-be7l.onrender.com/auth/login', { username, password });
 
       alert('✅ Login exitoso');
       localStorage.setItem('user', JSON.stringify(response.data)); // Guarda todo el usuario
