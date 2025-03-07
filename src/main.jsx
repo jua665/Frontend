@@ -5,6 +5,7 @@ import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import keys from '../keys.json';
 
+
 export async function registerServiceWorkerAndSubscribe() {
   // Recuperar usuario del localStorage
   let user = JSON.parse(localStorage.getItem('user'));
