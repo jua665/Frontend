@@ -8,6 +8,7 @@ const Register = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  console.log(API_URL);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
