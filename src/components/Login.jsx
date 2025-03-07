@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { registerServiceWorkerAndSubscribe } from '../main.jsx'; // Importa la función de suscripción
 
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +21,7 @@ const Login = () => {
     }
   
     try {
-      const response = await axios.post('http://localhost:5000/auth/login', { username, password });
+      const response = await axios.post('${API_URL}/auth/login', { username, password });
 
       alert('✅ Login exitoso');
       localStorage.setItem('user', JSON.stringify(response.data)); // Guarda todo el usuario

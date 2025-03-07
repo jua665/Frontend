@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Register = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +19,7 @@ const Register = () => {
 
     try {
       // Intentamos enviar los datos al backend
-      await axios.post('http://localhost:5000/auth/register', { username, password })
+      await axios.post('${API_URL}/auth/login/register', { username, password })
 
 
       alert('Usuario registrado exitosamente');
@@ -29,7 +32,7 @@ const Register = () => {
       // { data: { url: <endpoint>, data: { ...payload } } }
       saveToIndexedDB({
         data: {
-          url: 'http://localhost:5000/register',
+          url: '${API_URL}/register',
           data: { username, password },
         },
       });
