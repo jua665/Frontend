@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { registerServiceWorkerAndSubscribe } from '../main.jsx';
+import { registerServiceWorkerAndSubscribe } from '../main.jsx'; // Importa la función de suscripción
 
-const API_URL = process.env.REACT_APP_API_URL;
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -20,11 +19,12 @@ const Login = () => {
     }
   
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
+      const response = await axios.post('https://backend-be7l.onrender.com/auth/login', { username, password });
 
       alert('✅ Login exitoso');
-      localStorage.setItem('user', JSON.stringify(response.data));
+      localStorage.setItem('user', JSON.stringify(response.data)); // Guarda todo el usuario
 
+      // 🔹 Llamar a la función de notificaciones solo después del login exitoso
       await registerServiceWorkerAndSubscribe();
 
       navigate('/');
@@ -59,6 +59,7 @@ const Login = () => {
   );
 };
 
+// Estilos en línea
 const styles = {
   container: {
     display: 'flex',
