@@ -170,11 +170,27 @@ self.addEventListener('fetch', event => {
 
 
 self.addEventListener('push', event => {
-  const data = event.data ? event.data.json() : {};
+  const data = event.data?.json() || {};
   const options = {
-      body: data.body || "Mensaje por defecto",
-      icon: data.icon || "/icons/sao_2.png",
-      image: data.image || "/icons/sao_1.png",
+    body: data.body || "Bienvenido a la aplicación",
+    icon: "/src/icons/sao_2.png",
+    image: "/src/icons/sao_1.png",
+    vibrate: [100, 50, 100],
+    data: { url: '/' } // Redirección al hacer clic
   };
-  self.registration.showNotification(data.title || "Notificación", options);
+  self.registration.showNotification(data.title || "Inicio de Sesión Exitoso", options);
+});
+
+// Evento al hacer clic en la notificación
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      if (clientList.length > 0) {
+        clientList[0].focus();
+      } else {
+        clients.openWindow('/');
+      }
+    })
+  );
 });
