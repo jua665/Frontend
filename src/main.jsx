@@ -43,43 +43,48 @@ export async function registerServiceWorkerAndSubscribe() {
   }
 }
 
-// Función para suscribirse a las notificaciones push
 async function subscribeToPushNotifications(registro, user) {
   try {
-    // Suscribirse a las notificaciones push
     const subscription = await registro.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: keys.publicKey // Reemplaza con tu clave pública
+      applicationServerKey: keys.publicKey
     });
 
     const subscriptionJSON = subscription.toJSON();
     console.log('📡 Suscripción generada:', subscriptionJSON);
 
-    // Datos que se enviarán al backend
     const payload = {
       subscription: subscriptionJSON,
       userId: user.userId
     };
 
-    // Registrar en consola los datos antes de enviar
     console.log('📤 Enviando al backend:', payload);
 
-    // Enviar la suscripción al backend
     const response = await fetch('https://backend-be7l.onrender.com/auth/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${user.token}`
       },
-      body: JSON.stringify(payload) // Enviar el objeto correctamente
+      body: JSON.stringify(payload)
     });
 
     const result = await response.json();
     console.log('✅ Respuesta del backend:', result);
+
+    // Enviar notificación directa
+    if (Notification.permission === 'granted') {
+      new Notification('Notificación Activa', {
+        body: '¡Ya estás suscrito a las notificaciones!',
+        icon: '/icon.png' // Reemplaza con el ícono de tu preferencia
+      });
+    }
+    
   } catch (error) {
     console.error('❌ Error al suscribirse o enviar la suscripción al backend:', error);
   }
 }
+
 
 
 

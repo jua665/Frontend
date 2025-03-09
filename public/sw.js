@@ -170,26 +170,38 @@ self.addEventListener('fetch', event => {
 
 
 self.addEventListener('push', event => {
-  const data = event.data?.json() || {};
+  let data = {};
+  
+  try {
+    data = event.data.json(); // Intenta obtener el payload JSON
+  } catch (e) {
+    console.warn('❌ No se recibió un payload JSON. Usando valores predeterminados.');
+    data = { title: 'Notificación', body: 'Nuevo mensaje recibido', icon: '/icons/sao_2.png' };
+  }
+
   const options = {
-    body: data.body || "Bienvenido a la aplicación",
-    icon: "/src/icons/sao_2.png",
-    image: "/src/icons/sao_1.png",
-    vibrate: [100, 50, 100],
-    data: { url: '/' } // Redirección al hacer clic
+    body: data.body || 'Cuerpo de la notificación por defecto',
+    icon: data.icon || '/icons/sao_2.png',
+    image: data.image || '/icons/sao_1.png',
+    data: data.url || '/'
   };
-  self.registration.showNotification(data.title || "Inicio de Sesión Exitoso", options);
+
+  self.registration.showNotification(data.title || 'Título por defecto', options);
 });
 
-// Evento al hacer clic en la notificación
+// Permite abrir una URL al hacer clic en la notificación
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      if (clientList.length > 0) {
-        clientList[0].focus();
-      } else {
-        clients.openWindow('/');
+      const urlToOpen = event.notification.data;
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
       }
     })
   );
