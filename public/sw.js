@@ -170,10 +170,11 @@ self.addEventListener('fetch', event => {
 
 
 self.addEventListener('push', event => {
+  const data = event.data ? event.data.json() : {};
   const options = {
-    body: "Hola",
-    icon: "/icons/sao_2.png",
-    image: "/icons/sao_1.png"
+      body: data.body || "Mensaje por defecto",
+      icon: data.icon || "/icons/sao_2.png",
+      image: data.image || "/icons/sao_1.png",
   };
-  self.registration.showNotification("Titulo", options);
+  self.registration.showNotification(data.title || "Notificación", options);
 });
