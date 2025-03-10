@@ -50,12 +50,22 @@ self.addEventListener('sync', event => {
   }
 });
 
-// Guardar POST fallido en IndexedDB
+// Guardar POST fallido en IndexedDB si no está duplicado
 async function savePostRequest(url, data) {
   const db = await openDatabase();
   const transaction = db.transaction('pendingRequests', 'readwrite');
   const store = transaction.objectStore('pendingRequests');
-  await store.add({ url, data });
+
+  // Verificar si ya existe una solicitud similar
+  const allRequests = await store.getAll();
+  const isDuplicate = allRequests.some(req => req.url === url && JSON.stringify(req.data) === JSON.stringify(data));
+
+  if (!isDuplicate) {
+    await store.add({ url, data });
+    console.log('✅ Solicitud guardada en IndexedDB');
+  } else {
+    console.log('⚠ Solicitud duplicada no guardada');
+  }
 }
 
 // Recuperar y reenviar POST fallidos guardados en IndexedDB
@@ -133,39 +143,4 @@ self.addEventListener('fetch', event => {
       })
     );
   }
-});
-
-// Notificaciones push
-self.addEventListener('push', event => {
-  const data = event.data?.json() || {
-    title: 'Notificación',
-    body: 'Nuevo mensaje recibido',
-    icon: '/icons/sao_2.png'
-  };
-
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    data: data.url || '/'
-  };
-
-  self.registration.showNotification(data.title, options);
-});
-
-// Manejo de clics en notificaciones
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      const urlToOpen = event.notification.data;
-      for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
 });
