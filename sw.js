@@ -83,7 +83,7 @@ async function syncPosts() {
 
       dbRequest.onsuccess = async event => {
           const db = event.target.result;
-          const transaction = db.transaction('pendingRequests', 'readwrite');
+          const transaction = db.transaction('pendingRequests', 'readonly');
           const store = transaction.objectStore('pendingRequests');
 
           const getAllRequest = store.getAll();
@@ -100,7 +100,7 @@ async function syncPosts() {
                       });
 
                       if (response.ok) {
-                          store.delete(request.id);
+                          await deleteRequestById(db, request.id);
                           console.log("✔ POST sincronizado y eliminado de IndexedDB");
                       } else {
                           console.warn("⚠️ Error al sincronizar POST:", response.statusText);
@@ -124,6 +124,25 @@ async function syncPosts() {
       };
   });
 }
+
+// Función para eliminar el registro de forma segura
+async function deleteRequestById(db, id) {
+  return new Promise((resolve, reject) => {
+      const transaction = db.transaction('pendingRequests', 'readwrite');
+      const store = transaction.objectStore('pendingRequests');
+      const deleteRequest = store.delete(id);
+
+      deleteRequest.onsuccess = () => {
+          console.log(`🗑️ Eliminado correctamente el request con ID ${id}`);
+          resolve();
+      };
+      deleteRequest.onerror = event => {
+          console.error("❌ Error al eliminar el request", event.target.error);
+          reject(event.target.error);
+      };
+  });
+}
+
 
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
