@@ -130,7 +130,7 @@ async function deleteRequestById(db, id) {
   return new Promise((resolve, reject) => {
       const transaction = db.transaction('pendingRequests', 'readwrite');
       const store = transaction.objectStore('pendingRequests');
-      const deleteRequest = store.delete(id);
+      const deleteRequest = store.clear();
 
       deleteRequest.onsuccess = () => {
           console.log(`🗑️ Eliminado correctamente el request con ID ${id}`);
@@ -142,6 +142,8 @@ async function deleteRequestById(db, id) {
       };
   });
 }
+
+
 
 
 self.addEventListener('fetch', event => {

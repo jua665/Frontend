@@ -85,9 +85,6 @@ async function subscribeToPushNotifications(registro, user) {
   }
 }
 
-
-
-
 // Inicializar IndexedDB
 let db = window.indexedDB.open('database');
 
