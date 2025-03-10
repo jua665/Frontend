@@ -76,7 +76,7 @@ async function subscribeToPushNotifications(registro, user) {
     if (Notification.permission === 'granted') {
       new Notification('Notificación Activa', {
         body: '¡Ya estás suscrito a las notificaciones!',
-        icon: '/icon.png' // Reemplaza con el ícono de tu preferencia
+        icon: './icons/sao_1.png' // Reemplaza con el ícono de tu preferencia
       });
     }
     
