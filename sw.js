@@ -50,32 +50,6 @@ self.addEventListener('sync', event => {
   }
 });
 
-// Guardar POST fallido en IndexedDB
-async function savePostRequest(url, data) {
-  return new Promise((resolve, reject) => {
-    const dbRequest = indexedDB.open('offlineDB', 1);
-
-    dbRequest.onupgradeneeded = event => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('pendingRequests')) {
-        db.createObjectStore('pendingRequests', { keyPath: 'id', autoIncrement: true });
-      }
-    };
-
-    dbRequest.onsuccess = event => {
-      const db = event.target.result;
-      const transaction = db.transaction('pendingRequests', 'readwrite');
-      const store = transaction.objectStore('pendingRequests');
-      store.add({ url, data });
-
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = event => reject(event.target.error);
-    };
-
-    dbRequest.onerror = event => reject(event.target.error);
-  });
-}
-
 // Recuperar y reenviar POST fallidos guardados en IndexedDB
 async function syncPosts() {
   return new Promise((resolve, reject) => {
@@ -83,10 +57,12 @@ async function syncPosts() {
 
       dbRequest.onsuccess = async event => {
           const db = event.target.result;
-          const transaction = db.transaction('pendingRequests', 'readwrite');
-          const store = transaction.objectStore('pendingRequests');
-
+          
+          // Realizamos una transacción para obtener las solicitudes pendientes
+          const readTransaction = db.transaction('pendingRequests', 'readonly');
+          const store = readTransaction.objectStore('pendingRequests');
           const getAllRequest = store.getAll();
+
           getAllRequest.onsuccess = async event => {
               const requests = event.target.result;
               console.log('📂 Solicitudes pendientes:', requests);
@@ -100,8 +76,18 @@ async function syncPosts() {
                       });
 
                       if (response.ok) {
-                          store.delete(request.id);
-                          console.log("✔ POST sincronizado y eliminado de IndexedDB");
+                          // Crear una nueva transacción de escritura para eliminar el registro
+                          const writeTransaction = db.transaction('pendingRequests', 'readwrite');
+                          const writeStore = writeTransaction.objectStore('pendingRequests');
+                          writeStore.delete(request.id);
+
+                          writeTransaction.oncomplete = () => {
+                              console.log("✔ POST sincronizado y eliminado de IndexedDB");
+                          };
+
+                          writeTransaction.onerror = event => {
+                              console.error("❌ Error al eliminar de IndexedDB:", event.target.error);
+                          };
                       } else {
                           console.warn("⚠️ Error al sincronizar POST:", response.statusText);
                       }
@@ -109,6 +95,7 @@ async function syncPosts() {
                       console.error("❌ Error al sincronizar POST", error);
                   }
               }
+
               resolve();
           };
 
@@ -129,39 +116,44 @@ async function syncPosts() {
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
     console.log("📡 Interceptando POST a:", event.request.url);
+
     event.respondWith(
       fetch(event.request.clone()).catch(async () => {
         console.warn("❌ Falló el fetch, guardando en IndexedDB...");
 
-        const requestClone = event.request.clone();
-        let body = {};
-
         try {
-          body = await requestClone.json();
-        } catch (error) {
-          console.error("❌ Error al parsear el cuerpo de la solicitud", error);
-          return new Response(JSON.stringify({ error: 'Error al procesar el cuerpo de la solicitud' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
+          const requestClone = event.request.clone();
+          const body = await requestClone.json();
 
-        if (body) {
-          await savePostRequest(event.request.url, body);
+          if (body) {
+            await savePostRequest(event.request.url, body);
 
-          if ('sync' in self.registration) {
-            self.registration.sync.register('sync-posts').catch(err => console.error('❌ Error registrando sync:', err));
+            if ('sync' in self.registration) {
+              try {
+                await self.registration.sync.register('sync-posts');
+                console.log("✅ Sincronización registrada con éxito.");
+              } catch (syncError) {
+                console.error('❌ Error registrando sync:', syncError);
+              }
+            }
+
+            return new Response(
+              JSON.stringify({ message: 'Offline. Se guardó localmente' }), 
+              { status: 503, headers: { 'Content-Type': 'application/json' } }
+            );
+          } else {
+            console.error("❌ Cuerpo de la solicitud vacío");
+            return new Response(
+              JSON.stringify({ error: 'Cuerpo de la solicitud vacío' }), 
+              { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
           }
-
-          return new Response(JSON.stringify({ error: 'Offline. Se guardó localmente' }), {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        } else {
-          return new Response(JSON.stringify({ error: 'Cuerpo de la solicitud vacío' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+        } catch (error) {
+          console.error("❌ Error al procesar el cuerpo de la solicitud:", error);
+          return new Response(
+            JSON.stringify({ error: 'Error al procesar el cuerpo de la solicitud' }), 
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
         }
       })
     );
