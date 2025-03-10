@@ -2,22 +2,22 @@ const APP_SHELL_CACHE = 'AppShellv3';
 const DYNAMIC_CACHE = 'DinamicoV3';
 
 const APP_SHELL_FILES = [
-  "/",
-  "/index.html",
-  "/offline.html",
-  "/src/index.css",
-  "/src/App.css",
-  "/src/App.jsx",
-  "/src/main.jsx",
-  "/src/components/Home.jsx",
-  "/src/components/Login.jsx",
-  "/src/components/Register.jsx",
-  "/src/icons/sao_1.png",
-  "/src/icons/sao_2.png",
-  "/src/icons/sao_3.png",
-  "/src/icons/carga.png",
-  "/src/screenshots/cap.png",
-  "/src/screenshots/cap1.png",
+  '/',
+  '/index.html',
+  '/offline.html',
+  '/src/index.css',
+  '/src/App.css',
+  '/src/App.jsx',
+  '/src/main.jsx',
+  '/src/components/Home.jsx',
+  '/src/components/Login.jsx',
+  '/src/components/Register.jsx',
+  '/src/icons/sao_1.png',
+  '/src/icons/sao_2.png',
+  '/src/icons/sao_3.png',
+  '/src/icons/carga.png',
+  '/src/screenshots/cap.png',
+  '/src/screenshots/cap1.png'
 ];
 
 // Instalación: Precaching de la App Shell
@@ -52,6 +52,45 @@ self.addEventListener('sync', event => {
 
 // Guardar POST fallido en IndexedDB
 async function savePostRequest(url, data) {
+  const db = await openDatabase();
+  const transaction = db.transaction('pendingRequests', 'readwrite');
+  const store = transaction.objectStore('pendingRequests');
+  await store.add({ url, data });
+}
+
+// Recuperar y reenviar POST fallidos guardados en IndexedDB
+async function syncPosts() {
+  const db = await openDatabase();
+  const transaction = db.transaction('pendingRequests', 'readonly');
+  const store = transaction.objectStore('pendingRequests');
+  const requests = await store.getAll();
+
+  for (const request of requests) {
+    try {
+      const response = await fetch(request.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request.data),
+      });
+      if (response.ok) {
+        await deleteRequestById(db, request.id);
+        console.log('✔ POST sincronizado y eliminado de IndexedDB');
+      }
+    } catch (error) {
+      console.error('❌ Error al sincronizar POST', error);
+    }
+  }
+}
+
+// Función para eliminar el registro de forma segura
+async function deleteRequestById(db, id) {
+  const transaction = db.transaction('pendingRequests', 'readwrite');
+  const store = transaction.objectStore('pendingRequests');
+  await store.delete(id);
+}
+
+// Abrir la base de datos IndexedDB
+function openDatabase() {
   return new Promise((resolve, reject) => {
     const dbRequest = indexedDB.open('offlineDB', 1);
 
@@ -62,98 +101,16 @@ async function savePostRequest(url, data) {
       }
     };
 
-    dbRequest.onsuccess = event => {
-      const db = event.target.result;
-      const transaction = db.transaction('pendingRequests', 'readwrite');
-      const store = transaction.objectStore('pendingRequests');
-      store.add({ url, data });
-
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = event => reject(event.target.error);
-    };
-
+    dbRequest.onsuccess = event => resolve(event.target.result);
     dbRequest.onerror = event => reject(event.target.error);
   });
 }
 
-// Recuperar y reenviar POST fallidos guardados en IndexedDB
-async function syncPosts() {
-  return new Promise((resolve, reject) => {
-      const dbRequest = indexedDB.open('offlineDB', 1);
-
-      dbRequest.onsuccess = async event => {
-          const db = event.target.result;
-          const transaction = db.transaction('pendingRequests', 'readonly');
-          const store = transaction.objectStore('pendingRequests');
-
-          const getAllRequest = store.getAll();
-          getAllRequest.onsuccess = async event => {
-              const requests = event.target.result;
-              console.log('📂 Solicitudes pendientes:', requests);
-
-              for (const request of requests) {
-                  try {
-                      const response = await fetch(request.url, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(request.data),
-                      });
-
-                      if (response.ok) {
-                          await deleteRequestById(db, request.id);
-                          console.log("✔ POST sincronizado y eliminado de IndexedDB");
-                      } else {
-                          console.warn("⚠️ Error al sincronizar POST:", response.statusText);
-                      }
-                  } catch (error) {
-                      console.error("❌ Error al sincronizar POST", error);
-                  }
-              }
-              resolve();
-          };
-
-          getAllRequest.onerror = event => {
-              console.error("❌ Error al obtener las solicitudes fallidas", event.target.error);
-              reject(event.target.error);
-          };
-      };
-
-      dbRequest.onerror = event => {
-          console.error("❌ Error al abrir IndexedDB", event.target.error);
-          reject(event.target.error);
-      };
-  });
-}
-
-// Función para eliminar el registro de forma segura
-async function deleteRequestById(db, id) {
-  return new Promise((resolve, reject) => {
-      const transaction = db.transaction('pendingRequests', 'readwrite');
-      const store = transaction.objectStore('pendingRequests');
-      const deleteRequest = store.clear();
-
-      deleteRequest.onsuccess = () => {
-          console.log(`🗑️ Eliminado correctamente el request con ID ${id}`);
-          resolve();
-      };
-      deleteRequest.onerror = event => {
-          console.error("❌ Error al eliminar el request", event.target.error);
-          reject(event.target.error);
-      };
-  });
-}
-
-
-
-
+// Intercepción de solicitudes POST
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
-    console.log("📡 Interceptando POST a:", event.request.url);
-
     event.respondWith(
       fetch(event.request.clone()).catch(async () => {
-        console.warn("❌ Falló el fetch, guardando en IndexedDB...");
-
         try {
           const requestClone = event.request.clone();
           const body = await requestClone.json();
@@ -162,59 +119,40 @@ self.addEventListener('fetch', event => {
             await savePostRequest(event.request.url, body);
 
             if ('sync' in self.registration) {
-              try {
-                await self.registration.sync.register('sync-posts');
-                console.log("✅ Sincronización registrada con éxito.");
-              } catch (syncError) {
-                console.error('❌ Error registrando sync:', syncError);
-              }
+              await self.registration.sync.register('sync-posts');
             }
 
             return new Response(
-              JSON.stringify({ message: 'Offline. Se guardó localmente' }), 
+              JSON.stringify({ message: 'Offline. Se guardó localmente' }),
               { status: 503, headers: { 'Content-Type': 'application/json' } }
-            );
-          } else {
-            console.error("❌ Cuerpo de la solicitud vacío");
-            return new Response(
-              JSON.stringify({ error: 'Cuerpo de la solicitud vacío' }), 
-              { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
           }
         } catch (error) {
-          console.error("❌ Error al procesar el cuerpo de la solicitud:", error);
-          return new Response(
-            JSON.stringify({ error: 'Error al procesar el cuerpo de la solicitud' }), 
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
-          );
+          console.error('❌ Error al procesar la solicitud:', error);
         }
       })
     );
   }
 });
 
-
+// Notificaciones push
 self.addEventListener('push', event => {
-  let data = {};
-  
-  try {
-    data = event.data.json(); // Intenta obtener el payload JSON
-  } catch (e) {
-    console.warn('❌ No se recibió un payload JSON. Usando valores predeterminados.');
-    data = { title: 'Notificación', body: 'Nuevo mensaje recibido', icon: '/icons/sao_2.png' };
-  }
+  const data = event.data?.json() || {
+    title: 'Notificación',
+    body: 'Nuevo mensaje recibido',
+    icon: '/icons/sao_2.png'
+  };
 
   const options = {
-    body: data.body || 'Cuerpo de la notificación por defecto',
-    icon: data.icon || '/icons/sao_2.png',
-    image: data.image || '/icons/sao_1.png',
+    body: data.body,
+    icon: data.icon,
     data: data.url || '/'
   };
 
-  self.registration.showNotification(data.title || 'Título por defecto', options);
+  self.registration.showNotification(data.title, options);
 });
 
-// Permite abrir una URL al hacer clic en la notificación
+// Manejo de clics en notificaciones
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
