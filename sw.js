@@ -50,6 +50,32 @@ self.addEventListener('sync', event => {
   }
 });
 
+// Guardar POST fallido en IndexedDB
+async function savePostRequest(url, data) {
+  return new Promise((resolve, reject) => {
+    const dbRequest = indexedDB.open('offlineDB', 1);
+
+    dbRequest.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('pendingRequests')) {
+        db.createObjectStore('pendingRequests', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+
+    dbRequest.onsuccess = event => {
+      const db = event.target.result;
+      const transaction = db.transaction('pendingRequests', 'readwrite');
+      const store = transaction.objectStore('pendingRequests');
+      store.add({ url, data });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = event => reject(event.target.error);
+    };
+
+    dbRequest.onerror = event => reject(event.target.error);
+  });
+}
+
 // Recuperar y reenviar POST fallidos guardados en IndexedDB
 async function syncPosts() {
   return new Promise((resolve, reject) => {
@@ -57,12 +83,10 @@ async function syncPosts() {
 
       dbRequest.onsuccess = async event => {
           const db = event.target.result;
-          
-          // Realizamos una transacción para obtener las solicitudes pendientes
-          const readTransaction = db.transaction('pendingRequests', 'readonly');
-          const store = readTransaction.objectStore('pendingRequests');
-          const getAllRequest = store.getAll();
+          const transaction = db.transaction('pendingRequests', 'readwrite');
+          const store = transaction.objectStore('pendingRequests');
 
+          const getAllRequest = store.getAll();
           getAllRequest.onsuccess = async event => {
               const requests = event.target.result;
               console.log('📂 Solicitudes pendientes:', requests);
@@ -76,18 +100,8 @@ async function syncPosts() {
                       });
 
                       if (response.ok) {
-                          // Crear una nueva transacción de escritura para eliminar el registro
-                          const writeTransaction = db.transaction('pendingRequests', 'readwrite');
-                          const writeStore = writeTransaction.objectStore('pendingRequests');
-                          writeStore.delete(request.id);
-
-                          writeTransaction.oncomplete = () => {
-                              console.log("✔ POST sincronizado y eliminado de IndexedDB");
-                          };
-
-                          writeTransaction.onerror = event => {
-                              console.error("❌ Error al eliminar de IndexedDB:", event.target.error);
-                          };
+                          store.delete(request.id);
+                          console.log("✔ POST sincronizado y eliminado de IndexedDB");
                       } else {
                           console.warn("⚠️ Error al sincronizar POST:", response.statusText);
                       }
@@ -95,7 +109,6 @@ async function syncPosts() {
                       console.error("❌ Error al sincronizar POST", error);
                   }
               }
-
               resolve();
           };
 
@@ -111,7 +124,6 @@ async function syncPosts() {
       };
   });
 }
-
 
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
