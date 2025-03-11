@@ -20,7 +20,6 @@ const APP_SHELL_FILES = [
   '/src/screenshots/cap1.png'
 ];
 
-// Instalación: Precaching de la App Shell
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_SHELL_CACHE)
@@ -29,7 +28,6 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activación: Limpieza de cachés antiguos
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -42,47 +40,39 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Sincronización: Cuando la conexión se restablece, reintentar los POST fallidos
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-posts') {
-    console.log('📡 Intentando sincronizar POST guardados...');
-    event.waitUntil(syncPosts());
+    console.log('📡 Intentando sincronizar POST guardado...');
+    event.waitUntil(syncPost());
   }
 });
 
-// Guardar POST fallido en IndexedDB si no está duplicado
 async function savePostRequest(url, data) {
   const db = await openDatabase();
-  const transaction = db.transaction('pendingRequests', 'readwrite');
-  const store = transaction.objectStore('pendingRequests');
+  const transaction = db.transaction('pendingRequest', 'readwrite');
+  const store = transaction.objectStore('pendingRequest');
 
-  const allRequests = await store.getAll();
-  const isDuplicate = allRequests.some(req => req.url === url && JSON.stringify(req.data) === JSON.stringify(data));
-
-  if (!isDuplicate) {
-    await store.add({ url, data });
-    console.log('✅ Solicitud guardada en IndexedDB');
-  } else {
-    console.log('⚠ Solicitud duplicada no guardada');
-  }
+  await store.clear();
+  await store.put({ url, data });
+  console.log('✅ Solicitud guardada en IndexedDB');
 }
 
-// Recuperar y reenviar POST fallidos guardados en IndexedDB
-async function syncPosts() {
+async function syncPost() {
   const db = await openDatabase();
-  const transaction = db.transaction('pendingRequests', 'readonly');
-  const store = transaction.objectStore('pendingRequests');
-  const requests = await store.getAll();
+  const transaction = db.transaction('pendingRequest', 'readonly');
+  const store = transaction.objectStore('pendingRequest');
+  const request = await store.getAll();
 
-  for (const request of requests) {
+  if (request.length > 0) {
     try {
-      const response = await fetch(request.url, {
+      const response = await fetch(request[0].url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request.data),
+        body: JSON.stringify(request[0].data),
       });
+
       if (response.ok) {
-        await deleteRequestById(db, request.id);
+        await clearPendingRequest(db);
         console.log('✔ POST sincronizado y eliminado de IndexedDB');
       }
     } catch (error) {
@@ -91,22 +81,20 @@ async function syncPosts() {
   }
 }
 
-// Función para eliminar el registro de forma segura
-async function deleteRequestById(db, id) {
-  const transaction = db.transaction('pendingRequests', 'readwrite');
-  const store = transaction.objectStore('pendingRequests');
-  await store.delete(id);
+async function clearPendingRequest(db) {
+  const transaction = db.transaction('pendingRequest', 'readwrite');
+  const store = transaction.objectStore('pendingRequest');
+  await store.clear();
 }
 
-// Abrir la base de datos IndexedDB
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const dbRequest = indexedDB.open('offlineDB', 1);
 
     dbRequest.onupgradeneeded = event => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains('pendingRequests')) {
-        db.createObjectStore('pendingRequests', { keyPath: 'id', autoIncrement: true });
+      if (!db.objectStoreNames.contains('pendingRequest')) {
+        db.createObjectStore('pendingRequest', { autoIncrement: true });
       }
     };
 
@@ -115,7 +103,6 @@ function openDatabase() {
   });
 }
 
-// Intercepción de solicitudes POST
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
     if (!navigator.onLine) {
