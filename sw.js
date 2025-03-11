@@ -56,7 +56,6 @@ async function savePostRequest(url, data) {
   const transaction = db.transaction('pendingRequests', 'readwrite');
   const store = transaction.objectStore('pendingRequests');
 
-  // Verificar si ya existe una solicitud similar
   const allRequests = await store.getAll();
   const isDuplicate = allRequests.some(req => req.url === url && JSON.stringify(req.data) === JSON.stringify(data));
 
@@ -119,8 +118,9 @@ function openDatabase() {
 // Intercepción de solicitudes POST
 self.addEventListener('fetch', event => {
   if (event.request.method === 'POST') {
-    event.respondWith(
-      fetch(event.request.clone()).catch(async () => {
+    if (!navigator.onLine) {
+      console.warn('⚠ Sin conexión. Guardando POST en IndexedDB...');
+      event.respondWith((async () => {
         try {
           const requestClone = event.request.clone();
           const body = await requestClone.json();
@@ -140,7 +140,7 @@ self.addEventListener('fetch', event => {
         } catch (error) {
           console.error('❌ Error al procesar la solicitud:', error);
         }
-      })
-    );
+      })());
+    }
   }
 });
