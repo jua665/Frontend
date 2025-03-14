@@ -67,33 +67,52 @@ async function openOfflineDB() {
 
 // Función para sincronizar usuarios guardados en IndexedDB
 async function sincronizarUsuariosPendientes() {
-  const db = await openOfflineDB();
-  const transaction = db.transaction('usuarios', 'readonly');
-  const store = transaction.objectStore('usuarios');
-  const usuarios = await new Promise((resolve, reject) => {
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject('❌ Error al obtener usuarios');
-  });
+  if (!navigator.onLine) {
+    console.warn("⚠️ No hay conexión. La sincronización se intentará más tarde.");
+    return;
+  }
 
-  for (const usuario of usuarios) {
-    try {
-      const respuesta = await fetch('/api/usuarios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(usuario)
-      });
+  try {
+    const db = await openOfflineDB();
+    const transaction = db.transaction('usuarios', 'readonly');
+    const store = transaction.objectStore('usuarios');
 
-      if (respuesta.ok) {
-        // Eliminar usuario sincronizado de IndexedDB
-        const deleteTransaction = db.transaction('usuarios', 'readwrite');
-        const deleteStore = deleteTransaction.objectStore('usuarios');
-        deleteStore.delete(usuario.id);
+    const usuarios = await new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject('❌ Error al obtener usuarios');
+    });
 
-        console.log(`✅ Usuario ${usuario.id} sincronizado y eliminado de IndexedDB.`);
-      }
-    } catch (error) {
-      console.error('❌ Error al sincronizar usuario:', error);
+    if (usuarios.length === 0) {
+      console.log("✅ No hay usuarios pendientes por sincronizar.");
+      return;
     }
+
+    for (const usuario of usuarios) {
+      try {
+        const respuesta = await fetch('https://backend-be7l.onrender.com/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usuario.username, password: usuario.password })
+        });
+
+        if (respuesta.ok) {
+          // Eliminar usuario sincronizado de IndexedDB
+          const deleteTransaction = db.transaction('usuarios', 'readwrite');
+          const deleteStore = deleteTransaction.objectStore('usuarios');
+          deleteStore.delete(usuario.id);
+
+          console.log(`✅ Usuario ${usuario.username} sincronizado y eliminado de IndexedDB.`);
+        } else {
+          console.warn(`⚠️ No se pudo sincronizar el usuario ${usuario.username}. Reintentando más tarde.`);
+        }
+      } catch (error) {
+        console.error('❌ Error al sincronizar usuario:', error);
+      }
+    }
+
+    db.close();
+  } catch (error) {
+    console.error("❌ Error al sincronizar usuarios pendientes:", error);
   }
 }
