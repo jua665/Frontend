@@ -4,7 +4,7 @@ const DYNAMIC_CACHE = 'DinamicoV3';
 const APP_SHELL_FILES = [
   '/',
   '/index.html',
-  '/offline.html', // Página offline
+  '/offline.html',
   '/src/index.css',
   '/src/App.css',
   '/src/App.jsx',
@@ -52,6 +52,7 @@ async function savePostRequest(url, data) {
   const transaction = db.transaction('pendingRequest', 'readwrite');
   const store = transaction.objectStore('pendingRequest');
 
+  // Limpiar la base de datos antes de guardar la nueva solicitud
   await store.clear();
   await store.put({ url, data });
   console.log('✅ Solicitud guardada en IndexedDB');
@@ -78,6 +79,8 @@ async function syncPost() {
     } catch (error) {
       console.error('❌ Error al sincronizar POST', error);
     }
+  } else {
+    console.log('No hay solicitudes pendientes para sincronizar.');
   }
 }
 
@@ -89,10 +92,12 @@ async function clearPendingRequest(db) {
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
-    const dbRequest = indexedDB.open('offlineDB', 1);
+    const dbRequest = indexedDB.open('offlineDB', 2); // Aumentamos la versión de la base de datos
 
     dbRequest.onupgradeneeded = event => {
       const db = event.target.result;
+
+      // Crear el almacén de objetos si no existe
       if (!db.objectStoreNames.contains('pendingRequest')) {
         db.createObjectStore('pendingRequest', { autoIncrement: true });
       }
@@ -129,12 +134,5 @@ self.addEventListener('fetch', event => {
         }
       })());
     }
-  } else {
-    // Si no es un POST y no hay conexión, sirve la página offline
-    event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        return cachedResponse || fetch(event.request).catch(() => caches.match('/offline.html'));
-      })
-    );
   }
 });
