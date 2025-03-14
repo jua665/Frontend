@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+
+
 const Register = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,16 +18,26 @@ const Register = () => {
     }
 
     try {
-      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password });
+      // Intentamos enviar los datos al backend
+      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password })
 
-      alert('✅ Usuario registrado exitosamente');
+
+      alert('Usuario registrado exitosamente');
       setUsername('');
       setPassword('');
       setError('');
     } catch (err) {
       console.error("❌ Error en POST. Guardando en IndexedDB...", err);
-      saveToIndexedDB({ username, password });
+      // Guardamos en IndexedDB con la estructura que espera el SW:
+      // { data: { url: <endpoint>, data: { ...payload } } }
+      saveToIndexedDB({
+        data: {
+          url: 'https://backend-be7l.onrender.com/auth/register',
+          data: { username, password },
+        },
+      });
 
+      // Si el navegador soporta SyncManager, registramos la sincronización
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then(registration => {
           registration.sync.register('sync-posts')
@@ -36,12 +49,6 @@ const Register = () => {
   };
 
   function saveToIndexedDB(data) {
-    if (!window.indexedDB) {
-      console.warn("⚠️ DB no está disponible. Guardando en localStorage.");
-      localStorage.setItem('pendingRegister', JSON.stringify(data));
-      return;
-    }
-
     const request = indexedDB.open('offlineDB', 1);
 
     request.onupgradeneeded = (event) => {
@@ -55,7 +62,7 @@ const Register = () => {
       const db = event.target.result;
       const transaction = db.transaction('pendingRequests', 'readwrite');
       const store = transaction.objectStore('pendingRequests');
-      store.add({ data });
+      store.add(data);
       console.log("📥 Datos guardados en IndexedDB", data);
     };
 
@@ -69,29 +76,20 @@ const Register = () => {
       <form style={styles.form} onSubmit={handleSubmit}>
         <h2 style={styles.heading}>Registro</h2>
         {error && <div style={styles.error}>{error}</div>}
-        
-        <label style={styles.label} htmlFor="username">Usuario</label>
         <input
-          id="username"
           type="text"
           placeholder="Usuario"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           style={styles.input}
-          autoComplete="username"
         />
-
-        <label style={styles.label} htmlFor="password">Contraseña</label>
         <input
-          id="password"
           type="password"
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={styles.input}
-          autoComplete="new-password"
         />
-
         <button type="submit" style={styles.button}>Registrar</button>
       </form>
     </div>
@@ -119,13 +117,6 @@ const styles = {
     fontSize: '2rem',
     color: '#4CAF50',
     marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    textAlign: 'left',
-    marginBottom: '5px',
-    fontSize: '1rem',
-    color: '#333',
   },
   input: {
     width: '100%',
