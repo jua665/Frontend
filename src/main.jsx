@@ -43,7 +43,7 @@ export async function registerServiceWorkerAndSubscribe() {
   }
 }
 
-async function subscribeToPushNotifications(registro, user) {
+export async function subscribeToPushNotifications(registro, user) {
   try {
     const subscription = await registro.pushManager.subscribe({
       userVisibleOnly: true,
