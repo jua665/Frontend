@@ -24,6 +24,7 @@ const Register = () => {
       setError('');
     } catch (err) {
       console.error("❌ Error en POST. Guardando en IndexedDB...", err);
+      
       // Guardamos en IndexedDB con la estructura que espera el SW:
       // { data: { url: <endpoint>, data: { ...payload } } }
       saveToIndexedDB({
@@ -36,7 +37,7 @@ const Register = () => {
       // Si el navegador soporta SyncManager, registramos la sincronización
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then(registration => {
-          registration.sync.register('sync-posts')
+          registration.sync.register('sync-usuarios')  // Asegúrate de que el tag coincida con el usado en el SW
             .then(() => console.log("✅ Sincronización registrada en SW"))
             .catch(err => console.error("❌ Error registrando sync", err));
         });
