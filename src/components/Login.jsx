@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { subscribeToPushNotifications } from '../main.jsx'; // Importa la función de suscripción
-
-
-
+import { registerServiceWorkerAndSubscribe } from '../main.jsx'; // Importa la función de suscripción
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -27,7 +24,7 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(response.data)); // Guarda todo el usuario
 
       // 🔹 Llamar a la función de notificaciones solo después del login exitoso
-      await subscribeToPushNotifications();
+      await registerServiceWorkerAndSubscribe();
 
       navigate('/');
     } catch (error) {
