@@ -20,6 +20,7 @@ const APP_SHELL_FILES = [
   '/src/screenshots/cap1.png'
 ];
 
+// Instalación del SW y almacenamiento en caché
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_SHELL_CACHE)
@@ -28,6 +29,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
+// Activación y limpieza de caché viejo
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -40,94 +42,58 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-posts') {
-    console.log('📡 Intentando sincronizar POST guardado...');
-    event.waitUntil(syncPost());
+// Escuchar eventos de sincronización en segundo plano
+self.addEventListener('sync', async (event) => {
+  if (event.tag === 'sync-usuarios') {
+    console.log('📡 Intentando sincronizar usuarios guardados...');
+    event.waitUntil(sincronizarUsuariosPendientes());
   }
 });
 
-async function savePostRequest(url, data) {
-  const db = await openDatabase();
-  const transaction = db.transaction('pendingRequest', 'readwrite');
-  const store = transaction.objectStore('pendingRequest');
-
-  await store.clear();
-  await store.put({ url, data });
-  console.log('✅ Solicitud guardada en IndexedDB');
-}
-
-async function syncPost() {
-  const db = await openDatabase();
-  const transaction = db.transaction('pendingRequest', 'readonly');
-  const store = transaction.objectStore('pendingRequest');
-  const request = await store.getAll();
-
-  if (request.length > 0) {
-    try {
-      const response = await fetch(request[0].url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request[0].data),
-      });
-
-      if (response.ok) {
-        await clearPendingRequest(db);
-        console.log('✔ POST sincronizado y eliminado de IndexedDB');
-      }
-    } catch (error) {
-      console.error('❌ Error al sincronizar POST', error);
-    }
-  }
-}
-
-async function clearPendingRequest(db) {
-  const transaction = db.transaction('pendingRequest', 'readwrite');
-  const store = transaction.objectStore('pendingRequest');
-  await store.clear();
-}
-
-function openDatabase() {
+// Función para abrir IndexedDB
+async function openOfflineDB() {
   return new Promise((resolve, reject) => {
-    const dbRequest = indexedDB.open('offlineDB', 1);
-
-    dbRequest.onupgradeneeded = event => {
+    const request = indexedDB.open('offlineDB', 1);
+    request.onupgradeneeded = event => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains('pendingRequest')) {
-        db.createObjectStore('pendingRequest', { autoIncrement: true });
+      if (!db.objectStoreNames.contains('usuarios')) {
+        db.createObjectStore('usuarios', { keyPath: 'id', autoIncrement: true });
       }
     };
-
-    dbRequest.onsuccess = event => resolve(event.target.result);
-    dbRequest.onerror = event => reject(event.target.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject('❌ Error al abrir IndexedDB');
   });
 }
 
-self.addEventListener('fetch', event => {
-  if (event.request.method === 'POST') {
-    if (!navigator.onLine) {
-      console.warn('⚠ Sin conexión. Guardando POST en IndexedDB...');
-      event.respondWith((async () => {
-        try {
-          const requestClone = event.request.clone();
-          const body = await requestClone.json();
+// Función para sincronizar usuarios guardados en IndexedDB
+async function sincronizarUsuariosPendientes() {
+  const db = await openOfflineDB();
+  const transaction = db.transaction('usuarios', 'readonly');
+  const store = transaction.objectStore('usuarios');
+  const usuarios = await new Promise((resolve, reject) => {
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject('❌ Error al obtener usuarios');
+  });
 
-          if (body) {
-            await savePostRequest(event.request.url, body);
+  for (const usuario of usuarios) {
+    try {
+      const respuesta = await fetch('/api/usuarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(usuario)
+      });
 
-            if ('sync' in self.registration) {
-              await self.registration.sync.register('sync-posts');
-            }
+      if (respuesta.ok) {
+        // Eliminar usuario sincronizado de IndexedDB
+        const deleteTransaction = db.transaction('usuarios', 'readwrite');
+        const deleteStore = deleteTransaction.objectStore('usuarios');
+        deleteStore.delete(usuario.id);
 
-            return new Response(
-              JSON.stringify({ message: 'Offline. Se guardó localmente' }),
-              { status: 503, headers: { 'Content-Type': 'application/json' } }
-            );
-          }
-        } catch (error) {
-          console.error('❌ Error al procesar la solicitud:', error);
-        }
-      })());
+        console.log(`✅ Usuario ${usuario.id} sincronizado y eliminado de IndexedDB.`);
+      }
+    } catch (error) {
+      console.error('❌ Error al sincronizar usuario:', error);
     }
   }
-});
+}
