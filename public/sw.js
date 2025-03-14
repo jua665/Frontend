@@ -4,7 +4,7 @@ const DYNAMIC_CACHE = 'DinamicoV3';
 const APP_SHELL_FILES = [
   '/',
   '/index.html',
-  '/offline.html',
+  '/offline.html', // Página offline
   '/src/index.css',
   '/src/App.css',
   '/src/App.jsx',
@@ -129,5 +129,12 @@ self.addEventListener('fetch', event => {
         }
       })());
     }
+  } else {
+    // Si no es un POST y no hay conexión, sirve la página offline
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        return cachedResponse || fetch(event.request).catch(() => caches.match('/offline.html'));
+      })
+    );
   }
 });
