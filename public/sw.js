@@ -43,7 +43,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-posts') {
     console.log('📡 Intentando sincronizar POST guardado...');
-    event.waitUntil(syncPost());
+    event.waitUntil(syncPosts());
   }
 });
 
@@ -52,39 +52,43 @@ async function savePostRequest(url, data) {
   const transaction = db.transaction('pendingRequest', 'readwrite');
   const store = transaction.objectStore('pendingRequest');
 
-  // Limpiar la base de datos antes de guardar la nueva solicitud
-  await store.clear();
+  // Guardar la nueva solicitud de POST sin limpiar la base de datos
   await store.put({ url, data });
   console.log('✅ Solicitud guardada en IndexedDB');
 }
 
-async function syncPost() {
+async function syncPosts() {
   const db = await openDatabase();
   const transaction = db.transaction('pendingRequest', 'readonly');
   const store = transaction.objectStore('pendingRequest');
-  const request = await store.getAll();
+  const requests = await store.getAll();
 
-  if (request.length > 0) {
+  if (requests.length > 0) {
     try {
-      const response = await fetch(request[0].url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request[0].data),
-      });
+      for (const request of requests) {
+        const response = await fetch(request.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request.data),
+        });
 
-      if (response.ok) {
-        await clearPendingRequest(db);
-        console.log('✔ POST sincronizado y eliminado de IndexedDB');
+        if (response.ok) {
+          console.log(`✔ POST sincronizado: ${request.url}`);
+        } else {
+          console.error(`❌ Error al enviar el POST: ${request.url}`);
+        }
       }
+      await clearPendingRequests(db);
+      console.log('✔ Todos los POST sincronizados y eliminados de IndexedDB');
     } catch (error) {
-      console.error('❌ Error al sincronizar POST', error);
+      console.error('❌ Error al sincronizar los POST:', error);
     }
   } else {
     console.log('No hay solicitudes pendientes para sincronizar.');
   }
 }
 
-async function clearPendingRequest(db) {
+async function clearPendingRequests(db) {
   const transaction = db.transaction('pendingRequest', 'readwrite');
   const store = transaction.objectStore('pendingRequest');
   await store.clear();
@@ -120,6 +124,7 @@ self.addEventListener('fetch', event => {
           if (body) {
             await savePostRequest(event.request.url, body);
 
+            // Registrar la sincronización para la próxima vez que haya conexión
             if ('sync' in self.registration) {
               await self.registration.sync.register('sync-posts');
             }
