@@ -94,9 +94,9 @@ async function clearPendingRequests(db) {
   await store.clear();
 }
 
-function openDatabase() {
+async function openDatabase() {
   return new Promise((resolve, reject) => {
-    const dbRequest = indexedDB.open('offlineDB', 2); // Aumentamos la versión de la base de datos
+    const dbRequest = indexedDB.open('offlineDB', 2); // Usamos la versión 2 para asegurar que la actualización se maneje correctamente
 
     dbRequest.onupgradeneeded = event => {
       const db = event.target.result;
