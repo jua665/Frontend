@@ -5,7 +5,6 @@ import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import keys from '../keys.json';
 
-
 export async function registerServiceWorkerAndSubscribe() {
   // Recuperar usuario del localStorage
   let user = JSON.parse(localStorage.getItem('user'));
@@ -21,6 +20,7 @@ export async function registerServiceWorkerAndSubscribe() {
     try {
       // Registrar el Service Worker
       const registro = await navigator.serviceWorker.register('./sw.js', { type: 'module' });
+      console.log('✅ Service Worker registrado correctamente');
 
       // Verificar el estado de los permisos de notificación
       if (Notification.permission === 'granted') {
@@ -79,20 +79,29 @@ async function subscribeToPushNotifications(registro, user) {
         icon: './icons/sao_1.png' // Reemplaza con el ícono de tu preferencia
       });
     }
-    
   } catch (error) {
     console.error('❌ Error al suscribirse o enviar la suscripción al backend:', error);
   }
 }
 
 // Inicializar IndexedDB
-let db = window.indexedDB.open('database');
+let db;
+const request = window.indexedDB.open('database', 1);
 
-db.onupgradeneeded = event => {
-  let result = event.target.result;
-  if (!result.objectStoreNames.contains('libros')) {
-    result.createObjectStore('libros', { autoIncrement: true });
+request.onupgradeneeded = event => {
+  db = event.target.result;
+  if (!db.objectStoreNames.contains('libros')) {
+    db.createObjectStore('libros', { autoIncrement: true });
   }
+};
+
+request.onsuccess = event => {
+  db = event.target.result;
+  console.log('✅ IndexedDB inicializada correctamente');
+};
+
+request.onerror = event => {
+  console.error('❌ Error al inicializar IndexedDB:', event.target.error);
 };
 
 createRoot(document.getElementById('root')).render(
