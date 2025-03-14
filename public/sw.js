@@ -59,7 +59,6 @@ async function savePostRequest(url, data) {
   console.log('✅ Solicitud guardada en IndexedDB:', { url, data });
 }
 
-// Intenta enviar las solicitudes guardadas en IndexedDB
 async function syncPost() {
   const db = await openDatabase();
   const transaction = db.transaction('pendingRequest', 'readonly');
@@ -77,8 +76,11 @@ async function syncPost() {
         });
 
         if (response.ok) {
+          console.log('✔ POST sincronizado');
+          // Borra solo si la sincronización fue exitosa
           await clearPendingRequest(db);
-          console.log('✔ POST sincronizado y eliminado de IndexedDB');
+        } else {
+          console.error('❌ Error al sincronizar POST: Response no OK');
         }
       } catch (error) {
         console.error('❌ Error al sincronizar POST', error);
@@ -89,12 +91,12 @@ async function syncPost() {
   }
 }
 
-// Borra las solicitudes pendientes después de sincronizarlas
 async function clearPendingRequest(db) {
   const transaction = db.transaction('pendingRequest', 'readwrite');
   const store = transaction.objectStore('pendingRequest');
-  await store.clear();
+  await store.clear(); // Borra las solicitudes solo después de la sincronización
 }
+
 
 // Abre o crea la base de datos IndexedDB
 function openDatabase() {
