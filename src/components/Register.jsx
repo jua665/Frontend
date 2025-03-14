@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+
+const API_URL = process.env.REACT_APP_API_URL;
+
 const Register = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  console.log(API_URL);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +20,8 @@ const Register = () => {
 
     try {
       // Intentamos enviar los datos al backend
-      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password });
+      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password })
+
 
       alert('Usuario registrado exitosamente');
       setUsername('');
@@ -24,12 +29,11 @@ const Register = () => {
       setError('');
     } catch (err) {
       console.error("❌ Error en POST. Guardando en IndexedDB...", err);
-      
       // Guardamos en IndexedDB con la estructura que espera el SW:
       // { data: { url: <endpoint>, data: { ...payload } } }
       saveToIndexedDB({
         data: {
-          url: 'https://backend-be7l.onrender.com/auth/register',
+          url: `${API_URL}/register`,
           data: { username, password },
         },
       });
@@ -37,7 +41,7 @@ const Register = () => {
       // Si el navegador soporta SyncManager, registramos la sincronización
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then(registration => {
-          registration.sync.register('sync-usuarios')  // Asegúrate de que el tag coincida con el usado en el SW
+          registration.sync.register('sync-posts')
             .then(() => console.log("✅ Sincronización registrada en SW"))
             .catch(err => console.error("❌ Error registrando sync", err));
         });
@@ -46,7 +50,7 @@ const Register = () => {
   };
 
   function saveToIndexedDB(data) {
-    const request = indexedDB.open('offlineDB', 2);  // Cambié la versión a 2 para que se cree la tienda de objetos
+    const request = indexedDB.open('offlineDB', 1);
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
