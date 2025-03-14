@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-
-
 const Register = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,8 +16,7 @@ const Register = () => {
 
     try {
       // Intentamos enviar los datos al backend
-      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password })
-
+      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password });
 
       alert('Usuario registrado exitosamente');
       setUsername('');
@@ -49,7 +45,7 @@ const Register = () => {
   };
 
   function saveToIndexedDB(data) {
-    const request = indexedDB.open('offlineDB', 1);
+    const request = indexedDB.open('offlineDB', 2);  // Cambié la versión a 2 para que se cree la tienda de objetos
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
