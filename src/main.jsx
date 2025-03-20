@@ -5,9 +5,6 @@ import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import keys from '../keys.json';
 
-
-
-
 export async function registerServiceWorkerAndSubscribe() {
   // Recuperar usuario del localStorage
   let user = JSON.parse(localStorage.getItem('user'));
@@ -58,7 +55,8 @@ async function subscribeToPushNotifications(registro, user) {
 
     const payload = {
       subscription: subscriptionJSON,
-      userId: user.userId
+      userId: user.userId,
+      username: user.username
     };
 
     console.log('📤 Enviando al backend:', payload);
