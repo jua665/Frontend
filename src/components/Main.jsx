@@ -49,36 +49,38 @@ function Main() {
 
   const registerServiceWorker = async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js", {
-        type: "module",
-      });
-
+      const registration = await navigator.serviceWorker.register("./sw.js", { type: "module" });
+  
       const existingSubscription = await registration.pushManager.getSubscription();
+      console.log("Existing subscription:", existingSubscription);
       if (existingSubscription) return;
-
+  
       const permission = await Notification.requestPermission();
+      console.log("Notification permission:", permission);
       if (permission !== "granted") return;
-
+  
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: keys.publicKey,
       });
-
+  
+      console.log("New subscription:", subscription);
+  
       if (!userId) return;
-
+  
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, suscripcion: subscription.toJSON() }),
       });
-
+  
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
       console.log("Suscripción guardada en la base de datos:", await response.json());
-
     } catch (error) {
       console.error("Error en el registro del Service Worker:", error);
     }
   };
+  
 
   useEffect(() => {
     registerServiceWorker();
