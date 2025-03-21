@@ -13,17 +13,9 @@ function Main() {
 
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
+  console.log(localStorage,userRole);
 
-  useEffect(() => {
-    if (!userId) {
-      alert("No has iniciado sesión. Redirigiendo al login.");
-      navigate("/login");
-    }
 
-    if (!userRole) {
-      console.log("userRole no está definido en localStorage. Estableciendo valor por defecto.");
-    }
-  }, [userId, navigate, userRole]);
 
   useEffect(() => {
     if (userRole === "admin") {
@@ -137,14 +129,14 @@ function Main() {
                   <th>📛 Nombre</th>
                   <th>📩 Email</th>
                   <th>🌐 Endpoint</th>
-                  <th>✉️ Enviar Mensaje</th>
+                    <th>✉️ Enviar Mensaje</th>
                 </tr>
               </thead>
               <tbody>
                 {users.length > 0 ? (
                   users.map((user, index) => (
-                    <tr key={user.userId || index}>
-                      <td>{user.nombre}</td>
+                    <tr key={user._Id || index}>
+
                       <td>{user.email}</td>
                       <td>
                         <button className="send-message-btn" onClick={() => handleOpenModal(user)}>

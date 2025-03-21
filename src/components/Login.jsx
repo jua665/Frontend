@@ -20,23 +20,28 @@ function Main() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-      console.log("Respuesta del servidor:", data);// 🔍 Depuración
+    
+       
 
-      if (!response.ok) {
+      
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Respuesta del servidor:", data); // Asegúrate de que `data.user._Id` y `data.user.role` estén presentes.
+      
+        // Verifica si los valores son correctos antes de guardarlos
+        
+          localStorage.setItem('userId', data.user._id); // Asegúrate de que esto sea correcto
+          localStorage.setItem('userRole', data.user.role); // Asegúrate de que esto sea correcto
+          console.log("ID del usuario guardado:", data.user._Id);
+          console.log("Rol del usuario guardado:", data.user.role);
+      
+          alert('✅ Login exitoso');
+          navigate('/main');
+        
+      } else {
         throw new Error(data.message || 'Error al iniciar sesión.');
       }
-
-      
-
-      // Guardar datos en localStorage
-      localStorage.setItem('userId', data.user._Id);
-      localStorage.setItem('userRole', data.user.role); // Valor por defecto
-      
-
-
-      alert('✅ Login exitoso');
-      navigate('/main'); 
     } catch (err) {
       setError(err.message || 'No se pudo conectar al servidor. Inténtalo nuevamente más tarde.');
     }
