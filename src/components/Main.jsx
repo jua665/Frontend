@@ -11,7 +11,6 @@ function Main() {
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
   const navigate = useNavigate();
 
-  // Obtener datos del usuario desde localStorage
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
 
@@ -49,10 +48,7 @@ function Main() {
 
   const registerServiceWorker = async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js", {
-        type: "module",
-      });
-
+      const registration = await navigator.serviceWorker.register("./sw.js", { type: "module" });
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) return;
 
@@ -96,17 +92,14 @@ function Main() {
 
   const handleSendMessage = async () => {
     try {
-      // Verificar si selectedUser y suscripcion están definidos
       if (!selectedUser || !selectedUser.suscripcion) {
         throw new Error("No se ha seleccionado un usuario válido o la suscripción es inválida");
       }
   
-      // Verificar si el mensaje no está vacío
       if (!message.trim()) {
         throw new Error("El mensaje no puede estar vacío");
       }
   
-      // Hacer la solicitud para enviar el mensaje
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,7 +121,6 @@ function Main() {
       alert(error.message || "Hubo un error al enviar el mensaje");
     }
   };
-  
 
   return (
     <div className="page-container">

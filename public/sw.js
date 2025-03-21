@@ -178,3 +178,18 @@ self.addEventListener('activate', event => {
     ).then(() => self.clients.claim())
   );
 });
+
+
+self.addEventListener('push', function(event) {
+  let data = event.data ? event.data.json() : {};
+
+  const title = data.title || 'Notificación';
+  const options = {
+    body: data.message || 'Tienes una nueva notificación',
+    icon: '/icons/sao_1.png', // Cambiar al ícono de tu app
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
