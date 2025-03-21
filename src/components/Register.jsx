@@ -1,76 +1,132 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
-  const [username, setUsername] = useState('');
+  const [nombre, setNombre] = useState('');
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    window.addEventListener("online", () => setIsOnline(true));
+    window.addEventListener("offline", () => setIsOnline(false));
+
+    return () => {
+      window.removeEventListener("online", () => setIsOnline(true));
+      window.removeEventListener("offline", () => setIsOnline(false));
+    };
+  }, []);
+
+  const handleRegister = async (e) => {
     e.preventDefault();
-
-    if (!username || !password) {
-      setError('Por favor, complete todos los campos.');
+  
+    if (!isOnline) {
+      setError('No estás conectado a Internet. Los datos se guardarán localmente.');
+      insertIndexedDB({ email, nombre, password });
       return;
     }
-
+  
     try {
-      // Intentamos enviar los datos al backend
-      await axios.post('https://backend-be7l.onrender.com/auth/register', { username, password });
-
-      alert('Usuario registrado exitosamente');
-      setUsername('');
-      setPassword('');
-      setError('');
-    } catch (err) {
-      console.error("❌ Error en POST. Guardando en IndexedDB...", err);
-      
-      saveToIndexedDB({ username, password });
-
-      // Si el navegador soporta SyncManager, registramos la sincronización
-      if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.sync.register('sync-usuarios') // <-- Cambio importante aquí
-            .then(() => console.log("✅ Sincronización registrada en SW"))
-            .catch(err => console.error("❌ Error registrando sync", err));
-        });
+      const response = await fetch('https://backend-be7l.onrender.com/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, nombre, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        alert('Registro exitoso. Ahora puedes iniciar sesión.');
+        navigate('/login');
+      } else {
+        setError(data.message || 'Error al registrarte.');
       }
+    } catch (err) {
+      setError('No se pudo conectar al servidor. Inténtalo nuevamente.');
     }
   };
 
-  function saveToIndexedDB(usuario) {
-    const request = indexedDB.open('offlineDB', 1);
-
-    request.onupgradeneeded = (event) => {
+  function insertIndexedDB(data) {
+    let dbRequest = window.indexedDB.open("database", 2); // Asegúrate de usar una versión específica
+  
+    dbRequest.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains('usuarios')) {
-        db.createObjectStore('usuarios', { keyPath: 'id', autoIncrement: true });
+  
+      // Crear el object store 'Usuarios' si no existe
+      if (!db.objectStoreNames.contains("Usuarios")) {
+        db.createObjectStore("Usuarios", { keyPath: "email" });
+        console.log("✅ 'Usuarios' object store creado.");
+      } else {
+        console.log("⚠️ 'Usuarios' object store ya existe.");
       }
     };
-
-    request.onsuccess = (event) => {
+  
+    dbRequest.onsuccess = (event) => {
       const db = event.target.result;
-      const transaction = db.transaction('usuarios', 'readwrite');
-      const store = transaction.objectStore('usuarios');
-      store.add(usuario);
-      console.log("📥 Datos guardados en IndexedDB", usuario);
+  
+      // Verificar si el object store existe antes de insertar los datos
+      if (db.objectStoreNames.contains("Usuarios")) {
+        const transaction = db.transaction("Usuarios", "readwrite");
+        const objStore = transaction.objectStore("Usuarios");
+  
+        const addRequest = objStore.add(data);
+  
+        addRequest.onsuccess = () => {
+          console.log("✅ Datos insertados en IndexedDB:", addRequest.result);
+  
+          // Sincronizar datos si el navegador soporta Background Sync
+          if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready
+              .then((registration) => {
+                console.log("Intentando registrar la sincronización...");
+                return registration.sync.register("syncUsuarios");
+              })
+              .then(() => {
+                console.log("✅ Sincronización registrada con éxito");
+              })
+              .catch((err) => {
+                console.error("❌ Error registrando la sincronización:", err);
+              });
+          } else {
+            console.warn("⚠️ Background Sync no es soportado en este navegador.");
+          }
+        };
+  
+        addRequest.onerror = () => {
+          console.error("❌ Error insertando en IndexedDB");
+        };
+      } else {
+        console.error("❌ El object store 'Usuarios' no existe.");
+      }
     };
-
-    request.onerror = (error) => {
-      console.error("❌ Error guardando en IndexedDB", error);
+  
+    dbRequest.onerror = () => {
+      console.error("❌ Error abriendo IndexedDB");
     };
   }
+  
 
   return (
     <div style={styles.container}>
-      <form style={styles.form} onSubmit={handleSubmit}>
+      <form style={styles.form} onSubmit={handleRegister}>
         <h2 style={styles.heading}>Registro</h2>
         {error && <div style={styles.error}>{error}</div>}
         <input
           type="text"
-          placeholder="Usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          style={styles.input}
+        />
+        <input
+          type="email"
+          placeholder="Correo Electrónico"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           style={styles.input}
         />
         <input
@@ -86,7 +142,6 @@ const Register = () => {
   );
 };
 
-// Estilos en línea
 const styles = {
   container: {
     display: 'flex',

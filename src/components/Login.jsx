@@ -1,49 +1,60 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { registerServiceWorkerAndSubscribe } from '../main.jsx'; // Importa la función de suscripción
 
-const Login = () => {
-  const [username, setUsername] = useState('');
+function Main() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-  
-    if (!username || !password) {
-      setError('Por favor, complete todos los campos.');
-      return;
-    }
-  
+
     try {
-      const response = await axios.post('https://backend-be7l.onrender.com/auth/login', { username, password });
+      const response = await fetch('https://backend-be7l.onrender.com/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      console.log("Respuesta del servidor:", data);// 🔍 Depuración
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al iniciar sesión.');
+      }
+
+      // Validamos si `userId` existe antes de guardarlo
+      if (!data.userId) {
+        throw new Error('El servidor no devolvió un userId. Verifica el backend.');
+      }
+
+      // Guardar datos en localStorage
+      localStorage.setItem('userId', data.userId);
+      localStorage.setItem('userRole', data.role); // Valor por defecto
 
       alert('✅ Login exitoso');
-      localStorage.setItem('user', JSON.stringify(response.data)); // Guarda todo el usuario
-
-      // 🔹 Llamar a la función de notificaciones solo después del login exitoso
-      await registerServiceWorkerAndSubscribe();
-
-      navigate('/');
-    } catch (error) {
-      console.error('❌ Error en el login:', error);
-      setError('Credenciales incorrectas');
+      navigate('/main'); 
+    } catch (err) {
+      setError(err.message || 'No se pudo conectar al servidor. Inténtalo nuevamente más tarde.');
     }
   };
 
   return (
     <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleLogin} style={styles.form}>
         <h2 style={styles.heading}>Iniciar Sesión</h2>
         {error && <div style={styles.error}>{error}</div>}
         <input
-          type="text"
-          placeholder="Usuario"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          placeholder="Correo electrónico"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           style={styles.input}
+          required
         />
         <input
           type="password"
@@ -51,12 +62,13 @@ const Login = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={styles.input}
+          required
         />
         <button type="submit" style={styles.button}>Iniciar Sesión</button>
       </form>
     </div>
   );
-};
+}
 
 // Estilos en línea
 const styles = {
@@ -107,4 +119,4 @@ const styles = {
   },
 };
 
-export default Login;
+export default Main;

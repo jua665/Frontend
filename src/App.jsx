@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Home from './components/Home'; // Importar la página principal
 import SplashScreen from './components/SplashScreen'; // Importa el componente SplashScreen
+import Main from './components/Main';
 
 const App = () => {
   const [isSplashDone, setSplashDone] = useState(false);
@@ -29,6 +30,7 @@ const App = () => {
       ) : (
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/main" element={<Main />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Routes>
