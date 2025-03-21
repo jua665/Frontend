@@ -27,14 +27,13 @@ function Main() {
         throw new Error(data.message || 'Error al iniciar sesión.');
       }
 
-      // Validamos si `userId` existe antes de guardarlo
-      if (!data.userId) {
-        throw new Error('El servidor no devolvió un userId. Verifica el backend.');
-      }
+      
 
       // Guardar datos en localStorage
-      localStorage.setItem('userId', data.userId);
-      localStorage.setItem('userRole', data.role); // Valor por defecto
+      localStorage.setItem('userId', data.user._Id);
+      localStorage.setItem('userRole', data.user.role); // Valor por defecto
+      
+
 
       alert('✅ Login exitoso');
       navigate('/main'); 

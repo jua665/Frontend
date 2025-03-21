@@ -95,6 +95,7 @@ function Main() {
       if (!selectedUser || !selectedUser.suscripcion) {
         throw new Error("No se ha seleccionado un usuario válido o la suscripción es inválida");
       }
+      console.log(selectedUser.suscripcion)
   
       if (!message.trim()) {
         throw new Error("El mensaje no puede estar vacío");
