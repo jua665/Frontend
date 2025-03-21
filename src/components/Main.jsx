@@ -105,6 +105,7 @@ function Main() {
       if (!response.ok) throw new Error("Error al enviar el mensaje");
 
       alert("Mensaje enviado con éxito");
+      console.log(response);
       setMessage("");
       handleCloseModal();
     } catch (error) {
