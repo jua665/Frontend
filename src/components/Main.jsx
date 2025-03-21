@@ -96,23 +96,39 @@ function Main() {
 
   const handleSendMessage = async () => {
     try {
+      // Verificar si selectedUser y suscripcion están definidos
+      if (!selectedUser || !selectedUser.suscripcion) {
+        throw new Error("No se ha seleccionado un usuario válido o la suscripción es inválida");
+      }
+  
+      // Verificar si el mensaje no está vacío
+      if (!message.trim()) {
+        throw new Error("El mensaje no puede estar vacío");
+      }
+  
+      // Hacer la solicitud para enviar el mensaje
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ suscripcion: selectedUser.suscripcion, mensaje: message }),
+        body: JSON.stringify({
+          suscripcion: selectedUser.suscripcion,
+          mensaje: message,
+        }),
       });
-
+  
       if (!response.ok) throw new Error("Error al enviar el mensaje");
-
+  
+      const data = await response.json();
+      console.log("Mensaje enviado:", data);
       alert("Mensaje enviado con éxito");
-      console.log(response);
-      setMessage("");
-      handleCloseModal();
+      setMessage(""); // Limpiar el mensaje
+      handleCloseModal(); // Cerrar el modal
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
-      alert("Hubo un error al enviar el mensaje");
+      alert(error.message || "Hubo un error al enviar el mensaje");
     }
   };
+  
 
   return (
     <div className="page-container">
