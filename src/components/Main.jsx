@@ -114,11 +114,10 @@ function Main() {
       const data = await response.json();
       console.log("Mensaje enviado:", data);
       alert("Mensaje enviado con éxito");
-      setMessage(""); // Limpiar el mensaje
       handleCloseModal(); // Cerrar el modal
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
-      alert(error.message || "Hubo un error al enviar el mensaje");
+      alert("Hubo un error al enviar el mensaje");
     }
   };
 
