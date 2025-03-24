@@ -13,7 +13,7 @@ function Main() {
 
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
-  console.log(localStorage,userRole);
+  
 
 
 
@@ -128,15 +128,14 @@ function Main() {
                 <tr>
                   <th>📛 Nombre</th>
                   <th>📩 Email</th>
-                  <th>🌐 Endpoint</th>
                     <th>✉️ Enviar Mensaje</th>
                 </tr>
               </thead>
               <tbody>
                 {users.length > 0 ? (
                   users.map((user, index) => (
-                    <tr key={user._Id || index}>
-
+                    <tr key={user._id || index}>
+                      <td>{user._id}</td>
                       <td>{user.email}</td>
                       <td>
                         <button className="send-message-btn" onClick={() => handleOpenModal(user)}>
@@ -161,7 +160,7 @@ function Main() {
       {isModalOpen && (
         <div className="modal">
           <div className="modal-content">
-            <h3>Enviar mensaje a {selectedUser.nombre}</h3>
+            <h3>Enviar mensaje a {selectedUser.email}</h3>
             <textarea
               className="modal-textarea"
               placeholder="Escribe tu mensaje..."
