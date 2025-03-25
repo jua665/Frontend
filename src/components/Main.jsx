@@ -13,8 +13,6 @@ function Main() {
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
   
-  console.log(localStorage,userRole);
-  
   useEffect(() => {
     if (userRole === "admin") {
       fetch("https://backend-be7l.onrender.com/auth/users")
@@ -23,7 +21,8 @@ function Main() {
           return response.json();
         })
         .then((data) => {
-          const usersWithSubscription = data.filter((user) => user.suscripcion);
+          console.log("Usuarios obtenidos:", data); // ✅ Verifica los datos recibidos en la consola
+          const usersWithSubscription = data.filter((user) => user.suscripcion !== null && user.suscripcion !== undefined);
           setUsers(usersWithSubscription);
           setIsLoading(false);
         })
@@ -35,6 +34,7 @@ function Main() {
       setIsLoading(false);
     }
   }, [userRole]);
+  
 
   const registerServiceWorker = async () => {
     try {
@@ -50,12 +50,12 @@ function Main() {
         applicationServerKey: keys.publicKey,
       });
 
-      const json = subscription.toJSON();
+      if (!userId) return;
 
-      const response = await fetch('https://backend-be7l.onrender.com/auth/suscripcion', {
+      const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, suscripcion: json }),
+        body: JSON.stringify({ userId, suscripcion: subscription.toJSON() }),
       });
 
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
@@ -71,9 +71,11 @@ function Main() {
   }, []);
 
   const handleOpenModal = (user) => {
+    console.log("Usuario seleccionado:", user);
     setSelectedUser(user);
     setIsModalOpen(true);
   };
+  
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -82,29 +84,41 @@ function Main() {
 
   const handleSendMessage = async () => {
     try {
-      // Enviar la suscripción y el mensaje al backend
-      const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          suscripcion: selectedUser.suscripcion, // Enviar la suscripción del usuario
-          mensaje: message // Enviar el mensaje
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al enviar el mensaje');
+      if (!selectedUser) {
+        throw new Error("No se ha seleccionado un usuario válido.");
       }
   
+      if (!selectedUser.suscripcion) {
+        throw new Error(`El usuario ${selectedUser.email} no tiene una suscripción válida.`);
+      }
+  
+      if (!message.trim()) {
+        throw new Error("El mensaje no puede estar vacío");
+      }
+  
+      console.log("Enviando a suscripción:", selectedUser.suscripcion);
+  
+      const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suscripcion: selectedUser.suscripcion,
+          mensaje: message,
+        }),
+      });
+  
+      if (!response.ok) throw new Error("Error al enviar el mensaje");
+  
       const data = await response.json();
-      console.log('Mensaje enviado:', data);
-      alert('Mensaje enviado con éxito');
+      console.log("Mensaje enviado:", data);
+      alert("Mensaje enviado con éxito");
       handleCloseModal();
     } catch (error) {
-      console.error('Error al enviar el mensaje:', error);
-      alert('Hubo un error al enviar el mensaje');
+      console.error("Error al enviar el mensaje:", error);
+      alert(error.message);
     }
   };
+  
 
   return (
     <div className="page-container">
@@ -130,7 +144,7 @@ function Main() {
                       <td>{user._id}</td>
                       <td>{user.email}</td>
                       <td>
-                        <button onClick={() => handleSendMessage(user)}>
+                        <button className="send-message-btn" onClick={() => handleOpenModal(user)}>
                           Enviar
                         </button>
                       </td>
@@ -147,6 +161,24 @@ function Main() {
         </div>
       ) : (
         <p>⚠️ No tienes permisos para ver esta página.</p>
+      )}
+
+      {isModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Enviar mensaje a {selectedUser.email}</h3>
+            <textarea
+              className="modal-textarea"
+              placeholder="Escribe tu mensaje..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <div className="modal-actions">
+              <button className="close-btn" onClick={handleCloseModal}>Cerrar</button>
+              <button className="send-btn" onClick={handleSendMessage}>Enviar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
