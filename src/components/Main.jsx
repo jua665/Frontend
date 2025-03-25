@@ -10,7 +10,7 @@ function Main() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
   const navigate = useNavigate();
-  const userid = localStorage.getItem("userId");
+  const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
   
   useEffect(() => {
@@ -53,7 +53,7 @@ function Main() {
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userid, suscripcion: json }),
+        body: JSON.stringify({ userId, suscripcion: json }),
       });
 
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
@@ -128,7 +128,7 @@ function Main() {
                       <td>{user._id}</td>
                       <td>{user.email}</td>
                       <td>
-                        <button  onClick={() => handleOpenModal(user)}>
+                        <button onClick={() => handleOpenModal(user)}>
                           Enviar
                         </button>
                       </td>
@@ -145,24 +145,6 @@ function Main() {
         </div>
       ) : (
         <p>⚠️ No tienes permisos para ver esta página.</p>
-      )}
-
-      {isModalOpen && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Enviar mensaje a {selectedUser.email}</h3>
-            <textarea
-              className="modal-textarea"
-              placeholder="Escribe tu mensaje..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <div className="modal-actions">
-              <button className="close-btn" onClick={handleCloseModal}>Cerrar</button>
-              <button className="send-btn" onClick={handleSendMessage}>Enviar</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
