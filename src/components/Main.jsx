@@ -1,18 +1,15 @@
 import React, { useEffect, useState } from "react";
 import keys from "../../keys.json"; // Importa las llaves VAPID
 import { useNavigate } from "react-router-dom";
-import './Main.css'; // Importamos el archivo CSS
+import "./Main.css"; // Importamos el archivo CSS
 
 function Main() {
   const [users, setUsers] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
-  
+
   useEffect(() => {
     if (userRole === "admin") {
       fetch("https://backend-be7l.onrender.com/auth/users")
@@ -21,8 +18,10 @@ function Main() {
           return response.json();
         })
         .then((data) => {
-          console.log("Usuarios obtenidos:", data); // ✅ Verifica los datos recibidos en la consola
-          const usersWithSubscription = data.filter((user) => user.suscripcion !== null && user.suscripcion !== undefined);
+          console.log("Usuarios obtenidos:", data);
+          const usersWithSubscription = data.filter(
+            (user) => user.suscripcion !== null && user.suscripcion !== undefined
+          );
           setUsers(usersWithSubscription);
           setIsLoading(false);
         })
@@ -34,11 +33,12 @@ function Main() {
       setIsLoading(false);
     }
   }, [userRole]);
-  
 
   const registerServiceWorker = async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js", { type: "module" });
+      const registration = await navigator.serviceWorker.register("./sw.js", {
+        type: "module",
+      });
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) return;
 
@@ -60,7 +60,6 @@ function Main() {
 
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
       console.log("Suscripción guardada en la base de datos:", await response.json());
-
     } catch (error) {
       console.error("Error en el registro del Service Worker:", error);
     }
@@ -70,55 +69,39 @@ function Main() {
     registerServiceWorker();
   }, []);
 
-  const handleOpenModal = (user) => {
-    console.log("Usuario seleccionado:", user);
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-  
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setMessage("");
-  };
-
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (user) => {
     try {
-      if (!selectedUser) {
-        throw new Error("No se ha seleccionado un usuario válido.");
+      const message = prompt(`Escribe un mensaje para ${user.email}:`);
+      if (!message || !message.trim()) {
+        alert("El mensaje no puede estar vacío.");
+        return;
       }
-  
-      if (!selectedUser.suscripcion) {
-        throw new Error(`El usuario ${selectedUser.email} no tiene una suscripción válida.`);
+
+      if (!user.suscripcion) {
+        throw new Error(`El usuario ${user.email} no tiene una suscripción válida.`);
       }
-  
-      if (!message.trim()) {
-        throw new Error("El mensaje no puede estar vacío");
-      }
-  
-      console.log("Enviando a suscripción:", selectedUser.suscripcion);
-  
+
+      console.log("Enviando a suscripción:", user.suscripcion);
+
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          suscripcion: selectedUser.suscripcion,
+          suscripcion: user.suscripcion,
           mensaje: message,
         }),
       });
-  
+
       if (!response.ok) throw new Error("Error al enviar el mensaje");
-  
+
       const data = await response.json();
       console.log("Mensaje enviado:", data);
       alert("Mensaje enviado con éxito");
-      handleCloseModal();
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
       alert(error.message);
     }
   };
-  
 
   return (
     <div className="page-container">
@@ -134,7 +117,7 @@ function Main() {
                 <tr>
                   <th>ID</th>
                   <th>📩 Email</th>
-                    <th>✉️ Enviar Mensaje</th>
+                  <th>✉️ Enviar Mensaje</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,7 +127,7 @@ function Main() {
                       <td>{user._id}</td>
                       <td>{user.email}</td>
                       <td>
-                        <button className="send-message-btn" onClick={() => handleOpenModal(user)}>
+                        <button className="send-message-btn" onClick={() => handleSendMessage(user)}>
                           Enviar
                         </button>
                       </td>
@@ -152,7 +135,7 @@ function Main() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4">📭 No hay usuarios suscritos</td>
+                    <td colSpan="3">📭 No hay usuarios suscritos</td>
                   </tr>
                 )}
               </tbody>
@@ -161,24 +144,6 @@ function Main() {
         </div>
       ) : (
         <p>⚠️ No tienes permisos para ver esta página.</p>
-      )}
-
-      {isModalOpen && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Enviar mensaje a {selectedUser.email}</h3>
-            <textarea
-              className="modal-textarea"
-              placeholder="Escribe tu mensaje..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <div className="modal-actions">
-              <button className="close-btn" onClick={handleCloseModal}>Cerrar</button>
-              <button className="send-btn" onClick={handleSendMessage}>Enviar</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
