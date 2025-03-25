@@ -19,12 +19,6 @@ function Main() {
         },
         body: JSON.stringify({ email, password }),
       });
-
-    
-       
-
-      
-
       if (response.ok) {
         const data = await response.json();
         console.log("Respuesta del servidor:", data); // Asegúrate de que `data.user._Id` y `data.user.role` estén presentes.
@@ -33,7 +27,7 @@ function Main() {
         
           localStorage.setItem('userId', data.user._id); // Asegúrate de que esto sea correcto
           localStorage.setItem('userRole', data.user.role); // Asegúrate de que esto sea correcto
-          console.log("ID del usuario guardado:", data.user._Id);
+          console.log("ID del usuario guardado:", data.user._id);
           console.log("Rol del usuario guardado:", data.user.role);
       
           alert('✅ Login exitoso');

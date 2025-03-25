@@ -180,13 +180,21 @@ self.addEventListener('activate', event => {
 });
 
 
-self.addEventListener('push', function(event) {
-  let data = event.data ? event.data.json() : {};
+self.addEventListener("push", function(event) {
+  console.log("📩 Push event recibido:", event);
 
-  const title = data.title || 'Notificación';
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+    console.log("📨 Datos de la notificación:", data);
+  } catch (err) {
+    console.error("❌ Error procesando la notificación:", err);
+  }
+
+  const title = data.title || "Notificación";
   const options = {
-    body: data.message || 'Tienes una nueva notificación',
-    icon: '/icons/sao_1.png', // Cambiar al ícono de tu app
+    body: data.message || "Tienes una nueva notificación",
+    icon: "/icons/sao_1.png",
   };
 
   event.waitUntil(

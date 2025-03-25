@@ -52,12 +52,12 @@ function Main() {
         applicationServerKey: keys.publicKey,
       });
 
-      if (!userId) return;
+      const json = subscription.toJSON();
 
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, suscripcion: subscription.toJSON() }),
+        body: JSON.stringify({ userId, suscripcion: json }),
       });
 
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
@@ -84,33 +84,27 @@ function Main() {
 
   const handleSendMessage = async () => {
     try {
-      if (!selectedUser || !selectedUser.suscripcion) {
-        throw new Error("No se ha seleccionado un usuario válido o la suscripción es inválida");
-      }
-      console.log(selectedUser.suscripcion)
-  
-      if (!message.trim()) {
-        throw new Error("El mensaje no puede estar vacío");
-      }
-  
+      // Enviar la suscripción y el mensaje al backend
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcionMod", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          suscripcion: selectedUser.suscripcion,
-          mensaje: message,
-        }),
+          suscripcion: selectedUser.suscripcion, // Enviar la suscripción del usuario
+          mensaje: message // Enviar el mensaje
+        })
       });
-  
-      if (!response.ok) throw new Error("Error al enviar el mensaje");
+
+      if (!response.ok) {
+        throw new Error('Error al enviar el mensaje');
+      }
   
       const data = await response.json();
-      console.log("Mensaje enviado:", data);
-      alert("Mensaje enviado con éxito");
-      handleCloseModal(); // Cerrar el modal
+      console.log('Mensaje enviado:', data);
+      alert('Mensaje enviado con éxito');
+      handleCloseModal();
     } catch (error) {
-      console.error("Error al enviar el mensaje:", error);
-      alert("Hubo un error al enviar el mensaje");
+      console.error('Error al enviar el mensaje:', error);
+      alert('Hubo un error al enviar el mensaje');
     }
   };
 
@@ -126,7 +120,7 @@ function Main() {
             <table className="user-table">
               <thead>
                 <tr>
-                  <th>📛 Nombre</th>
+                  <th>ID</th>
                   <th>📩 Email</th>
                     <th>✉️ Enviar Mensaje</th>
                 </tr>
