@@ -10,13 +10,9 @@ function Main() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // Estado de carga
   const navigate = useNavigate();
-
-  const userId = localStorage.getItem("userId");
+  const userid = localStorage.getItem("userId");
   const userRole = localStorage.getItem("userRole");
   
-
-
-
   useEffect(() => {
     if (userRole === "admin") {
       fetch("https://backend-be7l.onrender.com/auth/users")
@@ -57,7 +53,7 @@ function Main() {
       const response = await fetch("https://backend-be7l.onrender.com/auth/suscripcion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, suscripcion: json }),
+        body: JSON.stringify({ userid, suscripcion: json }),
       });
 
       if (!response.ok) throw new Error(`Error en la solicitud: ${response.status}`);
@@ -132,7 +128,7 @@ function Main() {
                       <td>{user._id}</td>
                       <td>{user.email}</td>
                       <td>
-                        <button className="send-message-btn" onClick={() => handleOpenModal(user)}>
+                        <button  onClick={() => handleOpenModal(user)}>
                           Enviar
                         </button>
                       </td>

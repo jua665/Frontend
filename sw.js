@@ -180,24 +180,14 @@ self.addEventListener('activate', event => {
 });
 
 
-self.addEventListener("push", function(event) {
-  console.log("📩 Push event recibido:", event);
+self.addEventListener("push", (event) => {
 
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-    console.log("📨 Datos de la notificación:", data);
-  } catch (err) {
-    console.error("❌ Error procesando la notificación:", err);
+  let options={
+      body:event.data.text(),
+       body: "Hola, cómo estás?",
+      image: "./icons/sao_1.png",
   }
-
-  const title = data.title || "Notificación";
-  const options = {
-    body: data.message || "Tienes una nueva notificación",
-    icon: "/icons/sao_1.png",
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  
+  self.registration.showNotification("Titulo",options); 
+   
 });
