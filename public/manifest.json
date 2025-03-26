@@ -1,10 +1,13 @@
 {
   "name": "SAO",
   "short_name": "pwa",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#FFFFFF",
-  "theme_color": "#FF6D00",
+  "theme_color": "#4CAF50",
+  "description": "Esta es una aplicación web progresiva (PWA) para enviar notificaciones.",
   "icons": [
     {
       "src": "/icons/sao_3.png",
