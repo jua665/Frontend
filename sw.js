@@ -4,7 +4,7 @@ const DYNAMIC_CACHE = 'DinamicoV3';
 const APP_SHELL_FILES = [
   '/', 
   '/index.html', 
-  '/offline.html',
+  '/offline.html', // Página que se mostrará cuando no haya conexión
   '/index.css',
   '/App.css',
   '/App.jsx',
@@ -20,19 +20,49 @@ const APP_SHELL_FILES = [
   '/screenshots/cap1.png'
 ];
 
-self.addEventListener('install', event => {
-  self.skipWaiting();  // Forzar la instalación del nuevo SW
-});
-
 // Instalación del Service Worker y caché
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(APP_SHELL_CACHE).then(cache => cache.addAll(APP_SHELL_FILES))
+    caches.open(APP_SHELL_CACHE).then(cache => {
+      console.log("Cacheando archivos del APP SHELL...");
+      return cache.addAll(APP_SHELL_FILES);
+    })
   );
   self.skipWaiting();
 });
 
-// Guardar en IndexedDB en caso de fallo de red
+// Interceptar solicitudes de red
+self.addEventListener('fetch', event => {
+  if (!event.request.url.startsWith("http")) return; // Evita problemas con extensiones del navegador
+
+  if (event.request.method === "POST") {
+    event.respondWith(
+      event.request.clone().json()
+        .then(body => 
+          fetch(event.request)
+            .catch(() => {
+              InsertIndexedDB(body);
+              return new Response(JSON.stringify({ message: "Datos guardados offline" }), {
+                headers: { "Content-Type": "application/json" }
+              });
+            })
+        )
+        .catch(error => console.error("Error en fetch POST:", error))
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        return cachedResponse || fetch(event.request).then(response => {
+          let clone = response.clone();
+          caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone));
+          return response;
+        });
+      }).catch(() => caches.match('/offline.html')) // Página offline si no hay conexión
+    );
+  }
+});
+
+// Guardar datos en IndexedDB si no hay conexión
 function InsertIndexedDB(data) {
   const dbRequest = indexedDB.open("database", 2);
 
@@ -63,37 +93,6 @@ function InsertIndexedDB(data) {
 
   dbRequest.onerror = event => console.error("Error al abrir IndexedDB:", event.target.error);
 }
-
-// Interceptar solicitudes
-self.addEventListener('fetch', event => {
-  if (!event.request.url.startsWith("http")) return; // Evita problemas con extensiones
-
-  if (event.request.method === "POST") {
-    event.respondWith(
-      event.request.clone().json()
-        .then(body => 
-          fetch(event.request)
-            .catch(() => {
-              InsertIndexedDB(body);
-              return new Response(JSON.stringify({ message: "Datos guardados offline" }), {
-                headers: { "Content-Type": "application/json" }
-              });
-            })
-        )
-        .catch(error => console.error("Error en fetch POST:", error))
-    );
-  } else {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          let clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone));
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-  }
-});
 
 // Sincronización en segundo plano
 self.addEventListener('sync', event => {
@@ -179,15 +178,11 @@ self.addEventListener('activate', event => {
   );
 });
 
-
+// Notificaciones Push
 self.addEventListener("push", (event) => {
-
-  let options={
-      body:event.data.text(),
-       body: "Hola, cómo estás?",
-      image: "./icons/sao_1.png",
-  }
-  
-  self.registration.showNotification("Titulo",options); 
-   
+  let options = {
+    body: event.data ? event.data.text() : "Hola, cómo estás?",
+    image: "./icons/sao_1.png",
+  };
+  self.registration.showNotification("Titulo", options);
 });
