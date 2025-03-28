@@ -62,38 +62,35 @@ function InsertIndexedDB(data) {
 }
 
 // Interceptar solicitudes
-self.addEventListener("fetch", (event) => {
-  if (!event.request.url.startsWith("http")) return; // Evitar extensiones
+self.addEventListener('fetch', event => {
+  if (!event.request.url.startsWith("http")) return; // Evita problemas con extensiones
 
   if (event.request.method === "POST") {
     event.respondWith(
-      fetch(event.request.clone()).catch(async () => {
-        const formData = await event.request.clone().formData();
-        let data = {};
-        formData.forEach((value, key) => {
-          data[key] = value;
-        });
-
-        InsertIndexedDB(data);
-        return new Response(
-          JSON.stringify({ message: "Datos guardados offline" }),
-          { headers: { "Content-Type": "application/json" } }
-        );
-      })
+      event.request.clone().json()
+        .then(body => 
+          fetch(event.request)
+            .catch(() => {
+              InsertIndexedDB(body);
+              return new Response(JSON.stringify({ message: "Datos guardados offline" }), {
+                headers: { "Content-Type": "application/json" }
+              });
+            })
+        )
+        .catch(error => console.error("Error en fetch POST:", error))
     );
   } else {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
+        .then(response => {
           let clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(event.request, clone));
+          caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone));
           return response;
         })
         .catch(() => caches.match(event.request))
     );
   }
 });
-
 
 // Sincronización en segundo plano
 self.addEventListener('sync', event => {
@@ -164,11 +161,11 @@ self.addEventListener('sync', event => {
 });
 
 // Activación del SW y limpieza de caché antigua
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((keys) =>
+    caches.keys().then(keys =>
       Promise.all(
-        keys.map((key) => {
+        keys.map(key => {
           if (key !== APP_SHELL_CACHE && key !== DYNAMIC_CACHE) {
             console.log("Eliminando caché antigua:", key);
             return caches.delete(key);
@@ -178,61 +175,6 @@ self.addEventListener("activate", (event) => {
     ).then(() => self.clients.claim())
   );
 });
-
-// Intentar sincronizar los datos al recuperar conexión
-self.addEventListener("sync", (event) => {
-  if (event.tag === "syncUsuarios") {
-    event.waitUntil(syncData());
-  }
-});
-
-// También llamar a la sincronización cuando vuelva la conexión
-self.addEventListener("online", () => {
-  console.log("Conexión restaurada, intentando sincronizar...");
-  syncData();
-});
-
-// Función de sincronización mejorada
-async function syncData() {
-  const dbRequest = indexedDB.open("database", 2);
-
-  dbRequest.onsuccess = async (event) => {
-    let db = event.target.result;
-    if (!db.objectStoreNames.contains("Usuarios")) return;
-
-    let transaction = db.transaction("Usuarios", "readonly");
-    let store = transaction.objectStore("Usuarios");
-    let getAllRequest = store.getAll();
-
-    getAllRequest.onsuccess = async () => {
-      let usuarios = getAllRequest.result;
-      if (usuarios.length === 0) return;
-
-      let successfulRequests = [];
-      for (const user of usuarios) {
-        try {
-          let response = await fetch("https://backend-be7l.onrender.com/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(user),
-          });
-          if (response.ok) successfulRequests.push(user.id);
-        } catch (error) {
-          console.error("Error al sincronizar:", error);
-        }
-      }
-
-      // Si se enviaron con éxito, eliminarlos de IndexedDB
-      if (successfulRequests.length > 0) {
-        let deleteTx = db.transaction("Usuarios", "readwrite");
-        let deleteStore = deleteTx.objectStore("Usuarios");
-        successfulRequests.forEach((id) => deleteStore.delete(id));
-        console.log("Usuarios sincronizados y eliminados.");
-      }
-    };
-  };
-}
-
 
 
 self.addEventListener("push", (event) => {
