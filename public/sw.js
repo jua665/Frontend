@@ -20,6 +20,9 @@ const APP_SHELL_FILES = [
   '/screenshots/cap1.png'
 ];
 
+self.addEventListener('install', event => {
+  self.skipWaiting();  // Forzar la instalación del nuevo SW
+});
 
 // Instalación del Service Worker y caché
 self.addEventListener('install', event => {
